@@ -1,91 +1,83 @@
-import React, { Component } from "react";
-import ReactDOM from "react-dom";
-import Card from "./Card";
-import CardDeck from "./container/CardDeck";
-import PlaceholderImg from "./PlaceholderImg";
+/* eslint-disable consistent-return */
+/* eslint-disable no-nested-ternary */
+import React, { useState } from 'react';
+import { useSprings } from 'react-spring/hooks';
+import { useGesture } from 'react-with-gesture';
 
-import "normalize.css";
-// import "./styles.css";
+import Card from './Card';
+import candidates from '../fake-data';
 
-export default class CandidatesList extends Component {
-  cards = [
-    { id: 0, title: "First", content: "Passed with cards prop" },
-    {
-      id: 1,
-      title: "Second",
-      content: (
-        <div>
-          Also components are possible: <br />
-          <PlaceholderImg />
-          <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-            nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam
-            erat, sed diam voluptua. At vero eos et accusam et justo duo dolores
-            et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est
-            Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur
-            sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore
-            et dolore magna aliquyam erat, sed diam voluptua. At vero eos et
-            accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren,
-            no sea takimata sanctus est Lorem ipsum dolor sit amet.
-          </p>
-        </div>
-      )
+const to = (i) => ({
+  x: 0,
+  y: i * -10,
+  scale: 1,
+  rot: -10 + Math.random() * 20,
+  delay: i * 100,
+});
+const from = () => ({ rot: 0, scale: 1.5, y: -1000 });
+
+const trans = (r, s) => `perspective(1500px) rotateX(30deg) rotateY(${r
+    / 10}deg) rotateZ(${r}deg) scale(${s})`;
+
+function CandidatesList() {
+  const [gone] = useState(() => new Set());
+
+  const [props, set] = useSprings(candidates.length, (i) => ({
+    ...to(i),
+    from: from(i),
+  }));
+
+  const bind = useGesture(
+    ({
+      args: [index],
+      down,
+      delta: [xDelta],
+      direction: [xDir],
+      velocity,
+    }) => {
+      const trigger = velocity > 0.2;
+
+      const dir = xDir < 0 ? -1 : 1;
+
+      if (!down && trigger) gone.add(index);
+
+      set((i) => {
+        if (index !== i) return;
+        const isGone = gone.has(index);
+
+        const x = isGone ? (200 + window.innerWidth) * dir : down ? xDelta : 0;
+
+        const rot = xDelta / 100 + (isGone ? dir * 10 * velocity : 0);
+
+        const scale = down ? 1.1 : 1;
+        return {
+          x,
+          rot,
+          scale,
+          delay: undefined,
+          config: { friction: 50, tension: down ? 800 : isGone ? 200 : 500 },
+        };
+      });
+      if (!down && gone.size === candidates.length) {
+        setTimeout(() => gone.clear() || set((i) => to(i)), 600);
+      }
     }
-  ];
-  state = {
-    id: 0
-  };
-  reset = () => {
-    this.setState(state => ({
-      id: state.id + 1
-    }));
-  };
-  render() {
-    return (
-      <div className="App">
-        <button onClick={this.reset}>Reset</button>
-        {/* 
-          CardDeck component can use an id for resetting the deck.
-          Also cards prop or render props or Card components can be used to initialize cards
-          Order: First defined is top-most card in deck - can be reversed by `reverse` prop.
-        */}
-        <CardDeck
-          cardDeckId={this.state.id}
-          /*cards={this.cards}*/
+  );
 
-          /*reverse*/
-          /*displayNoCardsLeft*/
-        >
-          {/*({ addCards, renderCards }) => {
-            addCards(this.cards);
-            addCards({ title: "Third", content: "Render props api" });
-            return renderCards();
-          }*/}
-          <Card title="First">Content of card 1</Card>
-          <Card title="Second">
-            <p>Content of card 2</p>
-            <PlaceholderImg />
-          </Card>
-
-          {/* 
-          nested deck not supported yet - 
-          would require a check & handling in CardDeck render
-          <CardDeck key="Nested">
-            <Card title="Nested deck 1" />
-            <Card title="Nested deck 2">Don't use a final card</Card>
-          </CardDeck>
-          */}
-
-          {Array.from(Array(4).keys()).map(index => (
-            <Card title={["Third", "Fourth", "Fifth", "Sixth"][index]}>
-              Content of card {index + 3}
-            </Card>
-          ))}
-          <Card title="Final" fixed>
-            Last card - fixed card (no dragging)
-          </Card>
-        </CardDeck>
-      </div>
-    );
-  }
+  return props.map(({
+    x, y, rot, scale,
+  }, i) => (
+    <Card
+      i={i}
+      x={x}
+      y={y}
+      rot={rot}
+      scale={scale}
+      trans={trans}
+      data={candidates}
+      bind={bind}
+    />
+  ));
 }
+
+export default CandidatesList;

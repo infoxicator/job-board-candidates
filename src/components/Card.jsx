@@ -1,53 +1,40 @@
-import React from "react";
-import styled from "styled-components";
-import { animated } from "react-spring";
-import Card from "@material-ui/core/Card";
-import CardHeader from "@material-ui/core/CardHeader";
-import CardContent from "@material-ui/core/CardContent";
-import CardMedia from "@material-ui/core/CardMedia";
-import Scrollbars from "react-custom-scrollbars";
+/* eslint-disable react/jsx-props-no-spreading */
+/* eslint-disable react/forbid-prop-types */
+import React from 'react';
+import { animated, interpolate } from 'react-spring/hooks';
 
-const DEFAULT_IMAGE = "https://picsum.photos/800/100/?random/";
+const Card = ({
+  i, x, y, rot, scale, trans, bind, data,
+}) => {
+  const {
+    name, text, pics, profileUrl,
+  } = data[i];
 
-export default ({
-  dragHandle,
-  fixed,
-  id = 0,
-  title,
-  image,
-  isVisible,
-  style,
-  children
-}) =>
-  isVisible ? (
-    <Wrapper style={style} raised>
-      <Header {...dragHandle} title={title} fixed={fixed && fixed.toString()} />
-      {/* Note: Added id to the CardMedia image url to avoid caching - not used by the picsum api. */}
-      <CardMedia src={image || DEFAULT_IMAGE + id} component="img" />
-      <CardContent>
-        <Scrollbars autoHeight>{children}</Scrollbars>
-      </CardContent>
-    </Wrapper>
-  ) : null;
+  return (
+    <animated.div
+      key={i}
+      style={{
+        transform: interpolate(
+          [x, y],
+          (w, z) => `translate3d(${w}px,${z}px,0)`
+        ),
+      }}
+    >
+      <animated.div
+        {...bind(i)}
+        style={{
+          transform: interpolate([rot, scale], trans),
+        }}
+      >
+        <div>
+          <img src={pics} key={i} alt="profilePicture" />
+          <h2>{name}</h2>
+          <h5>{text}</h5>
+          <button type="button" className="button is-fullwidth" onClick={() => window.open(profileUrl, '_blank')}>View Profile</button>
+        </div>
+      </animated.div>
+    </animated.div>
+  );
+};
 
-const Header = styled(CardHeader)`
-  cursor: ${props => (!props.fixed ? "pointer" : "auto")};
-`;
-
-const MainContent = styled.div`
-  padding: 15px;
-`;
-
-const Wrapper = animated(styled(Card).attrs({
-  //draggable: true
-})`
-  position: absolute;
-  top: 30px;
-  left: 0;
-  right: 0;
-  margin: 0 auto;
-  width: 60%;
-  height: 70vh;
-  transform-origin: 50% 50%;
-  overflow: hidden;
-`);
+export default Card;
